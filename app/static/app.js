@@ -122,6 +122,90 @@ function renderStatus(st) {
   $('statusCounts').textContent = txt;
 }
 
+/* ---------- markdown editor (Step 2) ---------- */
+function mdToHtml(md) {
+  if (!md || !md.trim()) return '<p class="muted">Nothing to preview yet.</p>';
+  const inline = (t) => t
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+  const lines = esc(md).split(/\r?\n/);
+  let html = '', inUl = false, inOl = false;
+  const closeLists = () => {
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeLists(); continue; }
+    let m;
+    if ((m = line.match(/^(#{1,4})\s+(.*)/))) {
+      closeLists(); const lvl = Math.min(m[1].length + 2, 5);
+      html += `<h${lvl}>${inline(m[2])}</h${lvl}>`;
+    } else if ((m = line.match(/^[-*]\s+(.*)/))) {
+      if (!inUl) { closeLists(); html += '<ul>'; inUl = true; }
+      html += `<li>${inline(m[1])}</li>`;
+    } else if ((m = line.match(/^\d+\.\s+(.*)/))) {
+      if (!inOl) { closeLists(); html += '<ol>'; inOl = true; }
+      html += `<li>${inline(m[1])}</li>`;
+    } else {
+      closeLists(); html += `<p>${inline(line)}</p>`;
+    }
+  }
+  closeLists();
+  return html;
+}
+function setScopeTab(which) {
+  const edit = which === 'edit';
+  $('tabEdit').classList.toggle('active', edit);
+  $('tabPreview').classList.toggle('active', !edit);
+  $('scope').classList.toggle('hidden', !edit);
+  $('scopePreview').classList.toggle('hidden', edit);
+  if (!edit) $('scopePreview').innerHTML = mdToHtml($('scope').value);
+}
+
+/* ---------- import PDF / image (Step 2) ---------- */
+function initImport() {
+  $('docFile').addEventListener('change', importDoc);
+}
+async function importDoc(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  if (!key()) { ev.target.value = ''; return toast('Enter your API key first', 'error'); }
+  const btn = $('importBtn');
+  busy(btn, true, 'Extracting...');
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await api('/api/v1/extract-text', { method: 'POST', body: fd });
+    $('scope').value = r.text || '';
+    setScopeTab('edit');
+    toast('Text extracted — review & edit before running the audit', 'success');
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    busy(btn, false, '⤓ Import PDF / Image');
+    ev.target.value = '';
+  }
+}
+
+/* ---------- lightbox (full-size image) ---------- */
+function openLightbox(src) {
+  $('lightboxImg').src = src;
+  $('lightbox').classList.remove('hidden');
+}
+function closeLightbox() {
+  $('lightbox').classList.add('hidden');
+  $('lightboxImg').src = '';
+}
+function initLightbox() {
+  // delegate: any evidence thumbnail or chat reference image opens the lightbox
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('.thumb, .refs img')) openLightbox(e.target.src);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+}
+
 /* ---------- 2. audit ---------- */
 async function runAudit() {
   if (!key()) return toast('Enter your API key first', 'error');
@@ -149,7 +233,7 @@ function renderReport(rep) {
       render: (d) => `<div class="title">${esc(d.issue_title)}</div>
         <p><span class="label">Evidence:</span> ${esc(d.evidence_description)}</p>
         <p class="action">→ ${esc(d.suggested_action)}</p>
-        ${d.related_image_url ? `<a href="${esc(d.related_image_url)}" target="_blank"><img class="thumb" src="${esc(d.related_image_url)}" alt="evidence"></a>` : ''}` },
+        ${d.related_image_url ? `<img class="thumb" src="${esc(d.related_image_url)}" alt="evidence">` : ''}` },
     { key: 'ambiguity_alerts', title: 'Ambiguity Alerts', cls: 'ambiguity',
       render: (a) => `<blockquote>"${esc(a.original_text)}"</blockquote>
         <p><span class="label">Risk:</span> ${esc(a.risk_analysis)}</p>
@@ -182,7 +266,7 @@ async function sendChat() {
       body: JSON.stringify({ project_id: pid(), user_question: q, language: lang() }),
     });
     const refs = (r.reference_image_urls || [])
-      .map((u) => `<a href="${esc(u)}" target="_blank"><img src="${esc(u)}" alt="ref"></a>`).join('');
+      .map((u) => `<img src="${esc(u)}" alt="ref">`).join('');
     $('chat').innerHTML = `<div class="bubble">${esc(r.answer_text)}</div>
       ${refs ? `<div class="refs">${refs}</div>` : ''}`;
   } catch (e) {
@@ -195,3 +279,5 @@ async function sendChat() {
 /* ---------- init ---------- */
 loadSettings();
 initDropzone();
+initImport();
+initLightbox();

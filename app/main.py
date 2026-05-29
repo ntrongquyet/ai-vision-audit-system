@@ -5,7 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from openai import APIError
 from loguru import logger
 from app.config import get_settings
-from app.api import routes_index, routes_status, routes_audit, routes_chat, routes_uploads
+from app.api import (routes_index, routes_status, routes_audit, routes_chat,
+                     routes_uploads, routes_extract)
 
 app = FastAPI(title="AI Vision Audit System")
 
@@ -29,6 +30,7 @@ app.include_router(routes_status.router)
 app.include_router(routes_audit.router)
 app.include_router(routes_chat.router)
 app.include_router(routes_uploads.router)
+app.include_router(routes_extract.router)
 
 _settings = get_settings()
 os.makedirs(_settings.upload_dir, exist_ok=True)

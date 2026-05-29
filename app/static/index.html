@@ -68,7 +68,22 @@
         <span class="step">2</span>
         <h2>Run AI Audit</h2>
       </div>
-      <textarea id="scope" rows="6" placeholder="Paste the Scope of Works / quotation text here..."></textarea>
+      <div class="editor">
+        <div class="editor-toolbar">
+          <div class="tabs">
+            <button type="button" class="tab active" id="tabEdit" onclick="setScopeTab('edit')">Edit</button>
+            <button type="button" class="tab" id="tabPreview" onclick="setScopeTab('preview')">Preview</button>
+          </div>
+          <div class="editor-import">
+            <input type="file" id="docFile" accept=".pdf,image/*" hidden />
+            <button type="button" class="btn ghost sm" id="importBtn"
+                    onclick="document.getElementById('docFile').click()">⤓ Import PDF / Image</button>
+          </div>
+        </div>
+        <textarea id="scope" rows="10"
+          placeholder="Paste the Scope of Works (Markdown supported), or import a PDF/image to extract the text..."></textarea>
+        <div id="scopePreview" class="md-preview hidden"></div>
+      </div>
       <div class="actions">
         <button class="btn primary" id="auditBtn" onclick="runAudit()">Run AI Audit</button>
       </div>
@@ -91,6 +106,12 @@
   </main>
 
   <div id="toast" class="toast hidden"></div>
+
+  <div id="lightbox" class="lightbox hidden" onclick="closeLightbox()">
+    <span class="lightbox-close" aria-label="Close">&times;</span>
+    <img id="lightboxImg" src="" alt="full size evidence" onclick="event.stopPropagation()" />
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
