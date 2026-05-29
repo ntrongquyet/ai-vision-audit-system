@@ -1,10 +1,22 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from openai import APIError
+from loguru import logger
 from app.config import get_settings
 from app.api import routes_index, routes_status, routes_audit, routes_chat, routes_uploads
 
 app = FastAPI(title="AI Vision Audit System")
+
+
+@app.exception_handler(APIError)
+async def ai_provider_error_handler(request: Request, exc: APIError):
+    logger.error(f"AI provider error after retries: {exc!r}")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Hệ thống đang bận xử lý dữ liệu lớn, vui lòng thử lại sau 1 phút."},
+    )
 
 
 @app.get("/health")
