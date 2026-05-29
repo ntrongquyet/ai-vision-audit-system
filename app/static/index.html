@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><title>AI Vision Audit</title>
+<style>body{font-family:sans-serif;max-width:880px;margin:24px auto}section{border:1px solid #ddd;padding:12px;margin:12px 0;border-radius:8px}input,textarea{width:100%}img{max-width:160px;margin:4px}pre{white-space:pre-wrap;background:#f6f6f6;padding:8px}</style>
+</head><body>
+<h2>AI Vision Audit System — Demo</h2>
+<section><label>X-API-KEY</label><input id="key"><label>Project ID</label><input id="pid" value="PROJ-3132"></section>
+<section><h3>1. Upload & Index</h3><input type="file" id="files" multiple>
+<button onclick="uploadAndIndex()">Upload + Index</button>
+<button onclick="refreshStatus()">Refresh status</button><pre id="status"></pre></section>
+<section><h3>2. Audit</h3><textarea id="scope" rows="5" placeholder="Paste Scope of Works..."></textarea>
+<button onclick="runAudit()">Run AI Audit</button><div id="report"></div></section>
+<section><h3>3. Chat</h3><input id="q" placeholder="Any high-access paint work needed?">
+<button onclick="chat()">Ask</button><div id="chat"></div></section>
+<script src="/app.js"></script></body></html>
