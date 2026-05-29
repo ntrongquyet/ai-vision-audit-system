@@ -1,0 +1,40 @@
+BUSINESS REQUIREMENTS DOCUMENT (BRD)
+Project Name: AI Vision Audit System (Integrated with Supabase & Bubble)
+Target Client: Richard Waite (Construction, Painting & Washing Contracts)
+Author: SPORTAIV Team
+Date: May 29, 2026
+1. PROJECT OVERVIEW & CONTEXT
+Doanh nghiệp của khách hàng hoạt động trong lĩnh vực đấu thầu, thi công sơn và vệ sinh công nghiệp. Mỗi dự án yêu cầu khảo sát thực tế với số lượng hình ảnh lớn (từ 20 đến 40 ảnh/dự án) kết hợp với một văn bản phân rã khối lượng công việc (Scope of Works - SoW).
+Hiện tại, quy trình đối chiếu giữa hình ảnh hiện trường và văn bản báo giá đang được thực hiện thủ công, dẫn đến hai rủi ro lớn: bỏ sót hạng mục thi công gây thất thoát doanh thu (báo giá hớ) và mâu thuẫn ngôn từ trong hợp đồng gây tranh chấp chi phí với khách hàng sau này.
+Hệ thống AI Vision Audit được xây dựng nhằm tự động hóa quy trình kiểm định này, đóng vai trò như một "Trợ lý kiểm định cao cấp" giúp phát hiện sai lệch trước khi gửi báo giá chính thức.
+2. BUSINESS OBJECTIVES (MỤC TIÊU KINH DOANH)
+Tối ưu hóa doanh thu: Giảm tỷ lệ bỏ sót các hạng mục phụ nhưng có chi phí cao (ví dụ: máng nước rỉ sét, giàn giáo cho diện tường cao, xử lý sơn chì) xuống dưới 2%.
+Nâng cao năng suất: Giảm thời gian kiểm định và phê duyệt một bộ hồ sơ báo giá từ 30-45 phút thủ công xuống dưới 2 minutes bằng AI.
+Chuẩn hóa dữ liệu: Chuyển đổi toàn bộ quy trình ghi chép thủ công/hình ảnh rời rạc thành một kho lưu trữ tập trung, có chỉ mục ngữ nghĩa trên hệ thống dữ liệu nội bộ (Supabase).
+3. USER PERSONAS & STAKEHOLDERS
+Product Owner / Client (Richard Waite): Người quản lý tối cao, cần kiểm soát chi phí vận hành hệ thống AI, yêu cầu giải pháp tinh gọn, bảo mật dữ liệu, tích hợp trực tiếp vào hệ thống Bubble/Supabase hiện có của công ty.
+Estimator / Quoting Officer (Nhân viên báo giá): Người trực tiếp upload ảnh và dán văn bản SoW lên app Bubble. Cần giao diện cực kỳ đơn giản (Input/Output sạch), nhận kết quả cảnh báo rõ ràng để điều chỉnh báo giá kịp thời.
+Technical Team (SPORTAIV): Đội ngũ chịu trách nhiệm kiến trúc backend Python, xử lý luồng đi của dữ liệu AI và tối ưu hóa chi phí token.
+4. SCOPE OF THE PROJECT (PHẠM VI DỰ ÁN)
+In-Scope (Các hạng mục triển khai)
+Xây dựng Kiến trúc "Process Once, Query Anywhere": Đảm bảo mỗi hình ảnh tải lên chỉ bị AI quét và phân tích một lần duy nhất để tạo cơ sở dữ liệu nền (Visual Indexing), tránh lặp lại chi phí gọi API.
+Module Đối chiếu Tự động (AI Audit Engine): Phát hiện sự sai lệch (Discrepancies) giữa văn bản SoW và hình ảnh thực tế; Đưa ra cảnh báo về các ngôn từ mơ hồ (Ambiguity Alerts) trong báo giá dựa trên tiêu chuẩn ngành sơn và vệ sinh.
+Module Truy vấn Ngữ nghĩa (Semantic Search & Chat): Cho phép người dùng truy vấn, hỏi đáp trực tiếp trên toàn bộ album ảnh của dự án mà không cần tải lại ảnh (ví dụ: "Tìm các khu vực có rêu mốc").
+Tích hợp Hệ sinh thái Supabase: Đồng bộ và lưu trữ toàn bộ dữ liệu cấu trúc vào Supabase Tables, hình ảnh vào Supabase Storage, và dữ liệu vector hóa vào Supabase pgvector.
+Out-of-Scope (Các hạng mục không triển khai trong giai đoạn này)
+Xây dựng giao diện Frontend mới (Khách hàng tự xử lý trên app Bubble hiện tại của họ).
+Hệ thống tự động điều chỉnh mức giá bằng tiền (AI chỉ đưa ra cảnh báo hạng mục thiếu, không tự tính toán lại số tiền trên báo giá).
+Xử lý trực tiếp các ghi chép tay (Khách hàng đã chuyển sang dùng App nhập liệu cấu trúc, không dùng giấy tay).
+5. HIGH-LEVEL BUSINESS REQUIREMENTS (YÊU CẦU KINH DOANH BẬC CAO)
+Yêu cầu chức năng kinh doanh (Functional Business Requirements)
+BR-01 (Bulk Upload & Processing): Hệ thống phải có khả năng tiếp nhận và xử lý hàng loạt từ 20 đến 40 ảnh chất lượng cao cho mỗi dự án từ luồng dữ liệu của khách hàng.
+BR-02 (Standardized Audit Output): Báo cáo kết quả từ AI trả về bắt buộc phải phân tách rõ ràng thành 3 danh mục: Sai lệch hạng mục, Cảnh báo ngôn từ mơ hồ, và Khuyến nghị thiết bị/an toàn thi công.
+BR-03 (Industry Intelligence Integration): Bộ não AI phải được cấu hình để hiểu các quy tắc đặc thù ngành (Ví dụ: Nhà xây trước 1970 phải kiểm tra sơn chì; xác định chất liệu gạch/gỗ/bê tông để đưa ra áp lực phun rửa phù hợp).
+Yêu cầu phi chức năng kinh doanh (Non-Functional Business Requirements)
+BR-04 (Cost Efficiency): Chi phí biến đổi (API token cost) cho mỗi lượt audit dự án (gồm 30 ảnh) không được vượt quá mức ngân sách tối ưu (mục tiêu dưới $0.5 - $1.0 mỗi dự án).
+BR-05 (Data Sovereignty): Toàn bộ dữ liệu vector, tags, và mô tả của ảnh phải nằm trọn trong tài khoản Supabase của khách hàng, không phụ thuộc vào bên thứ ba lưu trữ.
+BR-06 (System Stability): Hệ thống backend phải có cơ chế xử lý lỗi ngầm (Silent Retry/Queue) khi gặp sự cố Rate Limit từ nhà cung cấp AI, không được trả lỗi kỹ thuật thô ra màn hình người dùng.
+6. SUCCESS CRITERIA (TIÊU CHÍ THÀNH CÔNG CỦA DỰ ÁN)
+Hệ thống backend Python kết nối và ghi nhận dữ liệu chính xác vào các bảng cấu trúc và bảng vector của Supabase do khách hàng chỉ định.
+AI phát hiện được ít nhất 90% các lỗi thiếu sót rõ ràng cố tình được cài cắm vào dữ liệu kiểm thử (Stress-test dữ liệu cũ của dự án Mosgiel).
+Richard Waite phê duyệt nghiệm thu giải pháp kiến trúc tinh gọn và kích hoạt giai đoạn triển khai chính thức theo giờ (Hourly Contract).

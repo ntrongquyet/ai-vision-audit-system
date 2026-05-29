@@ -1,0 +1,160 @@
+SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+Project Name: AI Vision Audit System (FastAPI + Supabase Ecosystem)
+Target Client: Richard Waite
+Author: SPORTAIV Team
+Date: May 29, 2026
+1. SYSTEM ARCHITECTURE & TECHNOLOGY STACK
+Hệ thống được triển khai theo kiến trúc Microservices tinh gọn, giao tiếp bất đồng bộ thông qua REST API.
+Runtime Environment: Python 3.11 trở lên.
+Web Framework: FastAPI (Uvicorn làm ASGI Server).
+Database Client: supabase-py SDK (Kết nối bất đồng bộ qua HTTPX).
+AI Orchestration: pydantic-ai hoặc langchain-core kết hợp google-generativeai và openai.
+Asynchronous Tasks: Tận dụng BackgroundTasks tích hợp sẵn của FastAPI để xử lý các tác vụ IO-bound nặng (quét ảnh/embedding).
+2. DATABASE SCHEMA DESIGN (SUPABASE / POSTGRESQL)
+Junior cần kích hoạt extension vector trong Supabase trước khi tạo bảng bằng lệnh:
+SQL
+CREATE EXTENSION IF NOT EXISTS vector;
+
+2.1. Bảng Chỉ Mục Hình Ảnh (project_visual_indices)
+Bảng này dùng để lưu trữ thông tin phân tích thô và vector hóa từ hình ảnh hiện trường.
+SQL
+CREATE TABLE project_visual_indices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id VARCHAR(255) NOT NULL,
+    image_url TEXT NOT NULL,
+    tags TEXT[] NOT NULL, -- Mảng lưu trữ các tag nhận diện từ Gemini
+    detailed_description TEXT NOT NULL,
+    embedding_vector vector(1536), -- Sử dụng OpenAI text-embedding-3-small (1536 dims)
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tạo Index HNSW để tối ưu hóa tìm kiếm tương đồng vector tốc độ cao
+CREATE INDEX project_visual_indices_vector_idx
+ON project_visual_indices
+USING hnsw (embedding_vector vector_cosine_ops);
+
+-- Tạo B-Tree Index thông thường để lọc theo Project ID nhanh hơn
+CREATE INDEX project_visual_indices_project_id_idx ON project_visual_indices (project_id);
+
+2.2. Bảng Báo Cáo Kiểm Định (project_audit_reports)
+Bảng này lưu trữ các báo cáo kiểm định cuối cùng dưới dạng dữ liệu cấu trúc JSONB để Bubble dễ truy vấn lại.
+SQL
+CREATE TABLE project_audit_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id VARCHAR(255) NOT NULL,
+    scope_text TEXT NOT NULL,
+    report_json JSONB NOT NULL, -- Chứa cấu trúc dữ liệu xuất ra từ Pydantic AI
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX project_audit_reports_project_id_idx ON project_audit_reports (project_id);
+
+3. API CONTRACT SPECIFICATIONS (FASTAPI)
+3.1. API Đánh Chỉ Mục Ảnh (Image Indexing)
+Endpoint: POST /api/v1/projects/index
+Content-Type: application/json
+Request Body Schema:
+JSON
+{
+  "project_id": "PROJ-3132",
+  "image_urls": [
+    "https://xxxx.supabase.co/storage/v1/object/public/photos/img1.jpg",
+    "https://xxxx.supabase.co/storage/v1/object/public/photos/img2.jpg"
+  ]
+}
+
+Response Schema (202 Accepted):
+JSON
+{
+  "status": "success",
+  "message": "Bulk image indexing initiated in background.",
+  "project_id": "PROJ-3132",
+  "total_images": 2
+}
+
+3.2. API Chạy Kiểm Định Báo Giá (Scope Audit)
+Endpoint: POST /api/v1/projects/audit
+Content-Type: application/json
+Request Body Schema:
+JSON
+{
+  "project_id": "PROJ-3132",
+  "scope_text": "Interior and Exterior Repaint '26. Paint all timber walls. Clean surfaces before application."
+}
+
+Response Schema (200 OK):
+JSON
+{
+  "project_id": "PROJ-3132",
+  "status": "completed",
+  "audit_report": {
+    "discrepancies": [
+      {
+        "issue_title": "Missed Rust Treatment on Roof",
+        "evidence_description": "Photo 1 shows severe rust patches on the corrugated roof iron, but the scope only accounts for timber walls.",
+        "suggested_action": "Add a separate line item for chemical rust conversion and anti-corrosive priming before painting.",
+        "related_image_url": "https://xxxx.supabase.co/storage/v1/object/public/photos/img1.jpg"
+      }
+    ],
+    "ambiguity_alerts": [
+      {
+        "original_text": "Clean surfaces before application.",
+        "risk_analysis": "The term 'clean' is vague. Photos show heavy mold requiring high-pressure washing at specific PSI, otherwise paint adhesion will fail.",
+        "recommended_phrasing": "Pressure wash all timber surfaces up to 1500 PSI to remove organic matter according to industry standards."
+      }
+    ],
+    "safety_equipment_recommendations": [
+      {
+        "equipment_name": "Cherry Picker / Boom Lift",
+        "reason": "The north-facing elevation walls exceed 5 meters in height with uneven ground obstacles below, making standard ladders unsafe."
+      }
+    ]
+  }
+}
+
+4. AI INTEGRATION & DATA ENFORCEMENT SPECIFICATIONS
+Junior cần sử dụng thư viện Pydantic trong Python để thiết lập cấu trúc bắt buộc (Strict Schema Parsing) nhằm ngăn chặn hiện tượng AI sinh dữ liệu tự do làm lỗi giao diện Bubble.
+4.1. Khung Kiểm Soát Kết Quả Báo Cáo (Pydantic Models)
+Python
+from pydantic import BaseModel, Field
+from typing import List
+
+class DiscrepancyItem(BaseModel):
+    issue_title: str = Field(description="Tiêu đề ngắn gọn về điểm sai lệch/bỏ sót")
+    evidence_description: str = Field(description="Mô tả bằng chứng kỹ thuật dựa trên ảnh hiện trường")
+    suggested_action: str = Field(description="Đề xuất hành động điều chỉnh báo giá")
+    related_image_url: str = Field(description="URL ảnh chứa bằng chứng sai lệch")
+
+class AmbiguityAlertItem(BaseModel):
+    original_text: str = Field(description="Đoạn văn bản gốc bị mơ hồ từ Scope of Works")
+    risk_analysis: str = Field(description="Phân tích rủi ro kinh doanh hoặc kỹ thuật nếu giữ nguyên câu chữ này")
+    recommended_phrasing: str = Field(description="Đề xuất viết lại câu chữ theo chuẩn kỹ thuật ngành sơn")
+
+class SafetyEquipmentItem(BaseModel):
+    equipment_name: str = Field(description="Tên thiết bị an toàn hoặc vật tư phụ cần bổ sung")
+    reason: str = Field(description="Lý do cần thiết dựa trên chiều cao hoặc địa hình trong ảnh")
+
+class AuditReportSchema(BaseModel):
+    discrepancies: List[DiscrepancyItem]
+    ambiguity_alerts: List[AmbiguityAlertItem]
+    safety_equipment_recommendations: List[SafetyEquipmentItem]
+
+4.2. Chiến Lược Điều Phối AI (Prompt Orchestration)
+Giai đoạn Indexing (Gemini 2.0 Flash): System Prompt ép AI đóng vai trò "Trợ lý khảo sát thực địa". Input là cấu trúc ảnh nhị phân (Bytes/URL). Output trả về bắt buộc tuân thủ Schema mô tả thô trạng thái bề mặt, chất liệu, và các dấu hiệu hư hại nhìn thấy được.
+Giai đoạn Reasoning (Claude 3.5 Sonnet / GPT-4o): System Prompt cấu hình làm "Chuyên gia tư vấn đấu thầu ngành sơn quốc tế". Hệ thống nạp toàn bộ danh sách text mô tả thu được từ bước 1 vào thẻ <context>, và văn bản báo giá vào thẻ <scope_text>. Sử dụng kỹ thuật pydantic-ai để phân tích và map trực tiếp dữ liệu vào cấu trúc AuditReportSchema.
+5. NON-FUNCTIONAL TECHNICAL REQUIREMENTS (YÊU CẦU PHI CHỨC NĂNG)
+5.1. Hiệu Năng & Kiểm Soát Bất Đồng Bộ (Concurrency & Throttling)
+Để không làm quá tải hạn mức gọi API cùng lúc (Rate Limit) của OpenAI hoặc Gemini, luồng xử lý ảnh ngầm phải sử dụng asyncio.Semaphore(value=5). Cơ chế này chỉ cho phép tối đa 5 tiến trình gửi ảnh qua API AI xử lý song song tại một thời điểm.
+5.2. Tính Tin Cậy & Quản Lý Lỗi (Fault Tolerance)
+Mọi điểm kết nối API bên thứ ba phải được bao bọc bởi Decorator retry từ thư viện tenacity.
+Python
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+async def call_ai_api_with_retry(...):
+    # Code gọi API ở đây
+    pass
+
+Nếu quá 3 lần thử lại thất bại, hệ thống bắt buộc phải bắt ngoại lệ (Catch Exception), log lỗi chi tiết qua thư viện loguru vào file hệ thống, cô lập ảnh lỗi và tiếp tục xử lý các ảnh còn lại trong mảng, không được để sập toàn bộ luồng request của dự án.
+5.3. Bảo Mật & Xác Thực (Security)
+FastAPI áp dụng cơ chế xác thực tầng trung gian (Middleware) kiểm tra HTTP Header X-API-KEY. App Bubble.io khi bắn request sang bắt buộc phải đính kèm chuỗi Key bí mật này để ngăn chặn các truy cập trái phép từ bên ngoài vào API nội bộ.

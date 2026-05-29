@@ -1,0 +1,71 @@
+FUNCTIONAL REQUIREMENTS SPECIFICATION (FRS)
+Project Name: AI Vision Audit System (FastAPI + Supabase Ecosystem)
+Target Client: Richard Waite
+Author: SPORTAIV Team
+Date: May 29, 2026
+1. SYSTEM ACTORS (TÁC NHÂN HỆ THỐNG)
+Estimator (User): Nhân viên báo giá, tương tác với giao diện Bubble.io để tải ảnh, nhập văn bản Scope of Works và xem báo cáo kiểm định.
+Bubble.io (Frontend): Giao diện gửi nhận dữ liệu thông qua REST API HTTP Requests.
+FastAPI Backend (Python): Hệ thống xử lý logic nghiệp vụ, điều phối luồng dữ liệu, xử lý bất đồng bộ (Async) và kết nối các mô hình AI.
+Supabase (Database/Storage): Nơi lưu trữ thực thể dữ liệu (Tables), tệp tin hình ảnh (Storage) và không gian vector (pgvector).
+AI Models (Gemini 2.0 Flash / Claude 3.5 Sonnet): Các thực thể API bên thứ ba thực hiện tác vụ thị giác máy tính và lập luận ngôn ngữ.
+2. FUNCTIONAL BREAKDOWN (CHI TIẾT CÁC CHỨC NĂNG)
+Luồng chức năng 1: Khởi tạo dự án & Đánh chỉ mục hình ảnh (Visual Indexing)
+FR-1.1: Tiếp nhận dữ liệu tải lên hàng loạt (Bulk Image Ingestion)
+Mô tả: Hệ thống phải tiếp nhận yêu cầu xử lý hình ảnh từ Bubble khi một dự án mới được khởi tạo hoặc cập nhật album ảnh.
+Luồng xử lý (Workflow):
+Bubble gửi một HTTP POST request đến endpoint /api/v1/projects/index của FastAPI.
+Payload đầu vào bắt buộc chứa: project_id (String) và image_urls (Array of Strings - danh sách link ảnh đã lưu thành công trên Supabase Storage).
+FastAPI kiểm tra tính hợp lệ của dữ liệu (Validation). Nếu mảng URL rỗng, trả về mã lỗi 400 Bad Request.
+FR-1.2: Xử lý bất đồng bộ và quét ảnh song song (Async Parallel Processing)
+Mô tả: Để tránh nghẽn luồng kết nối của Bubble, FastAPI phải xử lý tác vụ đọc ảnh chạy ngầm (Background Task).
+Luồng xử lý (Workflow):
+Ngay khi nhận được request hợp lệ, FastAPI lập tức trả về mã 202 Accepted kèm tin nhắn "Processing started" cho Bubble để giải phóng giao diện người dùng (User không phải chờ đợi màn hình quay vòng).
+Ở tiến trình ngầm, FastAPI sử dụng asyncio.gather để chia mảng ảnh thành các nhóm nhỏ (Batch size = 5 ảnh/lượt) nhằm kiểm soát băng thông và tỷ lệ gọi API (Rate Limit).
+Với mỗi ảnh, hệ thống gọi API Gemini 2.0 Flash để trích xuất dữ liệu thô.
+FR-1.3: Trích xuất và lưu trữ dữ liệu phân tích cấu trúc (Structured Tagging & Storage)
+Mô tả: Hệ thống thu thập mô tả hình ảnh từ AI và lưu trữ dưới dạng văn bản kèm tọa độ vector.
+Luồng xử lý (Workflow):
+Hệ thống ép kiểu dữ liệu trả về từ Gemini 2.0 Flash theo một cấu trúc JSON cố định (Sử dụng Pydantic Schema):
+tags: Mảng các từ khóa nhận diện (Ví dụ: ["tường gạch", "máng nước", "rêu mốc"]).
+detailed_description: Chuỗi văn bản mô tả chi tiết trạng thái vật lý bề mặt.
+FastAPI tự động gọi mô hình Text Embedding để chuyển đổi chuỗi detailed_description thành một mảng số thực (Vector 1536 chiều hoặc tùy theo model).
+FastAPI sử dụng Supabase Python SDK để thực hiện lệnh Bulk Insert toàn bộ dữ liệu (Gồm: project_id, image_url, tags, description, embedding_vector) vào bảng project_visual_indices.
+Luồng chức năng 2: Đối chiếu & Xuất báo cáo kiểm định (AI Scope Audit)
+FR-2.1: Tiếp nhận văn bản hạng mục thi công (Scope of Works Ingestion)
+Mô tả: Tiếp nhận văn bản báo giá để chuẩn bị đối chiếu chéo với kho ảnh đã chỉ mục.
+Luồng xử lý (Workflow):
+Khi User bấm nút "Run AI Audit" trên Bubble, Bubble gửi một HTTP POST request đến endpoint /api/v1/projects/audit.
+Payload đầu vào chứa: project_id (String) và scope_text (String - Nội dung văn bản báo giá bằng tiếng Anh).
+FR-2.2: Tổng hợp ngữ cảnh và Lập luận đối chiếu (Context Aggregation & Reasoning)
+Mô tả: Hệ thống kéo dữ liệu từ Supabase và dùng mô hình AI cấp cao để tìm ra điểm mâu thuẫn.
+Luồng xử lý (Workflow):
+FastAPI truy vấn Supabase để lấy toàn bộ danh sách detailed_description của tất cả các ảnh thuộc project_id tương ứng.
+Hệ thống gộp toàn bộ các mô tả ảnh này thành một khối văn bản ngữ cảnh (Context Block).
+Hệ thống cấu hình một System Prompt chuyên gia ngành sơn/vệ sinh công nghiệp và gửi toàn bộ dữ liệu (Context Block + scope_text) sang mô hình Claude 3.5 Sonnet hoặc GPT-4o.
+FR-2.3: Xuất cấu trúc báo cáo kiểm định (Enforced Structured Audit Output)
+Mô tả: Đảm bảo dữ liệu báo cáo trả về Bubble luôn sạch sẽ, không có văn bản thừa và đúng định dạng hiển thị.
+Luồng xử lý (Workflow):
+FastAPI sử dụng Pydantic để bắt buộc AI trả về kết quả định dạng JSON chuẩn với cấu trúc sau:
+discrepancies (Array of Objects): Danh sách các hạng mục có trong ảnh nhưng thiếu trong văn bản báo giá. Mỗi Object gồm: issue_title, evidence_description, suggested_action, related_image_url.
+ambiguity_alerts (Array of Objects): Các câu từ mơ hồ cần làm rõ trong văn bản báo giá. Mỗi Object gồm: original_text, risk_analysis, recommended_phrasing.
+safety_equipment_recommendations (Array of Objects): Khuyến nghị về an toàn vật tư (ví dụ: cần xe nâng, giàn giáo).
+FastAPI lưu báo cáo này vào bảng project_audit_reports trong Supabase để lưu vết lịch sử, sau đó trả mã 200 OK kèm nội dung JSON này về cho Bubble hiển thị lên màn hình.
+Luồng chức năng 3: Hỏi đáp tương tác ngữ nghĩa (Semantic Query / Chat)
+FR-3.1: Tìm kiếm tương đồng dựa trên Vector (Vector Similarity Retrieval)
+Mô tả: Khi người dùng chat hỏi về dự án, hệ thống không quét lại toàn bộ album mà chỉ lọc ra những ảnh liên quan nhất.
+Luồng xử lý (Workflow):
+Bubble gửi câu hỏi của User (Ví dụ: "Any high-access paint work needed?") đến endpoint /api/v1/projects/chat.
+Payload gồm: project_id và user_question.
+FastAPI chuyển đổi user_question thành vector embedding.
+FastAPI thực hiện một lệnh gọi hàm RPC (Remote Procedure Call) xuống Supabase để thực hiện phép toán so sánh Cosine Similarity trên bảng project_visual_indices. Hệ thống chỉ lấy ra Top 3 bản ghi có độ tương đồng cao nhất (ngưỡng tương đồng lớn hơn 0.7).
+FR-3.2: Trả lời ngữ cảnh kèm bằng chứng hình ảnh (Contextual QA with Image Reference)
+Mô tả: AI trả lời câu hỏi dựa trên 3 bức ảnh được lọc ra và chỉ đích danh link ảnh cho user xem.
+Luồng xử lý (Workflow):
+FastAPI gửi câu hỏi của user kết hợp với nội dung text mô tả của 3 bức ảnh tìm được ở bước trước vào LLM.
+AI trả về câu trả lời dạng văn bản ngắn gọn.
+FastAPI đóng gói dữ liệu trả về cho Bubble gồm: Chuỗi văn bản câu trả lời (answer_text) và mảng các URL ảnh bằng chứng (reference_image_urls).
+3. EXCEPTION HANDLING (XỬ LÝ CÁC LUỒNG NGOẠI LỆ / LỖI)
+EX-01 (API Rate Limit / Token Exhaustion): Nếu lệnh gọi API đến OpenAI/Gemini trả về lỗi quá tải hoặc hết hạn mức (HTTP Status 429), code Python phải kích hoạt thư viện tenacity để tự động chạy lại (Retry) với cơ chế giãn cách thời gian lũy tiến (Exponential Backoff). Tối đa thử lại 3 lần. Nếu vẫn lỗi sau 3 lần, ghi log vào Supabase lỗi và trả về mã 503 Service Unavailable kèm thông báo thân thiện cho user: "Hệ thống đang bận xử lý dữ liệu lớn, vui lòng thử lại sau 1 phút."
+EX-02 (Invalid Project State): Nếu user bấm nút "Run AI Audit" nhưng dự án chưa được chạy luồng Khởi tạo dữ liệu (Giai đoạn 1 - Bảng dữ liệu vector đang trống), FastAPI lập tức chặn lại và trả về mã 422 Unprocessable Entity kèm thông báo: "Vui lòng tải lên và xử lý hình ảnh dự án trước khi thực hiện kiểm định báo giá."
+EX-03 (Timeout Prevention): Đối với các tác vụ yêu cầu lập luận sâu ở Giai đoạn 2 (có thể mất từ 30s đến 45s để Claude xuất báo cáo), cấu hình của FastAPI (Uvicorn/Gunicorn timeout) phải được thiết lập tối thiểu là 90 giây để tránh việc ngắt kết nối giữa chừng với Bubble.
