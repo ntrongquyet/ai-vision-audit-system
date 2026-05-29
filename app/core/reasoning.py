@@ -24,10 +24,10 @@ async def run_audit(context_block: str, scope_text: str,
     user = (
         f"<context>\n{context_block}\n</context>\n"
         f"<scope_text>\n{scope_text}\n</scope_text>\n"
-        f"IMPORTANT: Keep the JSON keys exactly as specified (in English), but write "
-        f"every human-readable text VALUE (issue_title, evidence_description, "
-        f"suggested_action, original_text, risk_analysis, recommended_phrasing, "
-        f"equipment_name, reason) in {language}."
+        f"IMPORTANT: Keep the JSON keys exactly as specified (in English), and keep "
+        f"related_image_urls as raw URLs, but write every human-readable text VALUE "
+        f"(issue_title, evidence_description, suggested_action, original_text, "
+        f"risk_analysis, recommended_phrasing, equipment_name, reason) in {language}."
     )
     messages = [
         {"role": "system", "content": REASONING_SYSTEM_PROMPT},

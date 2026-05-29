@@ -9,7 +9,7 @@ class DiscrepancyItem(BaseModel):
     issue_title: str
     evidence_description: str
     suggested_action: str
-    related_image_url: str
+    related_image_urls: list[str] = Field(default_factory=list)
 
 class AmbiguityAlertItem(BaseModel):
     original_text: str

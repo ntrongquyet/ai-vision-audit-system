@@ -6,7 +6,7 @@ from app.core import reasoning
 async def test_run_audit_parses_report():
     payload = {"discrepancies": [{"issue_title":"Rust on roof",
         "evidence_description":"Photo shows rust","suggested_action":"Add rust line item",
-        "related_image_url":"http://x/1.jpg"}],
+        "related_image_urls":["http://x/1.jpg","http://x/2.jpg"]}],
         "ambiguity_alerts": [], "safety_equipment_recommendations": []}
     fake = AsyncMock()
     fake.chat.completions.create.return_value = type("R", (), {

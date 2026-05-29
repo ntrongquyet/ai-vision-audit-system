@@ -19,7 +19,12 @@ Apply industry rules:
 - Rusty metal (roof iron, gutters, downpipes) → recommend rust treatment + anti-corrosive primer.
 
 Return STRICT JSON matching this shape exactly:
-{"discrepancies":[{"issue_title","evidence_description","suggested_action","related_image_url"}],
+{"discrepancies":[{"issue_title","evidence_description","suggested_action","related_image_urls":[]}],
  "ambiguity_alerts":[{"original_text","risk_analysis","recommended_phrasing"}],
  "safety_equipment_recommendations":[{"equipment_name","reason"}]}
-Use empty arrays when nothing applies. Do not invent image URLs not present in context."""
+Rules for image URLs:
+- Put EVERY photo URL that evidences a discrepancy into its "related_image_urls" array (one or more).
+- NEVER write image URLs inside "evidence_description" or any other text field. Refer to photos in
+  words only (e.g. "the north elevation photo"), not by URL.
+- Only use image URLs that appear in <context>; do not invent URLs.
+Use empty arrays when nothing applies."""

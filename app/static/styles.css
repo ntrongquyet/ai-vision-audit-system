@@ -148,6 +148,23 @@ textarea { resize: vertical; }
 .thumb { margin-top: 10px; border-radius: 8px; max-width: 220px; border: 1px solid var(--border); display: block; }
 .empty-note { color: var(--muted); font-size: 14px; padding: 8px 0; }
 
+/* Evidence carousel */
+.carousel { position: relative; margin-top: 12px; display: inline-block; max-width: 100%; }
+.car-stage img { display: block; max-width: 340px; max-height: 260px; border-radius: 8px; border: 1px solid var(--border); }
+.car-btn {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border-radius: 50%; border: none;
+  background: rgba(15,23,42,.55); color: #fff; font-size: 20px; line-height: 1;
+  cursor: pointer; display: grid; place-items: center; transition: background .15s;
+}
+.car-btn:hover { background: rgba(15,23,42,.8); }
+.car-btn.prev { left: 8px; } .car-btn.next { right: 8px; }
+.car-count {
+  position: absolute; bottom: 8px; right: 10px;
+  background: rgba(15,23,42,.65); color: #fff; font-size: 12px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px;
+}
+
 /* Markdown editor */
 .editor { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .editor-toolbar {

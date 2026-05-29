@@ -227,13 +227,60 @@ async function runAudit() {
   }
 }
 
+/* ---------- image helpers + carousel ---------- */
+const URL_RE = /https?:\/\/[^\s)<>"']+/g;
+function extractUrls(t) { return t ? (String(t).match(URL_RE) || []) : []; }
+function stripUrls(t) {
+  if (!t) return '';
+  return String(t).replace(URL_RE, '')
+    .replace(/\(\s*\)/g, '')          // empty parens left behind
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,;:])/g, '$1')
+    .trim();
+}
+function collectImageUrls(d) {
+  const arr = Array.isArray(d.related_image_urls) ? d.related_image_urls.slice() : [];
+  if (d.related_image_url) arr.push(d.related_image_url);     // legacy single field
+  extractUrls(d.evidence_description).forEach((u) => arr.push(u));
+  return [...new Set(arr.filter(Boolean))];
+}
+function mediaHtml(urls) {
+  if (!urls.length) return '';
+  if (urls.length === 1)
+    return `<img class="thumb" src="${esc(urls[0])}" alt="evidence">`;
+  const imgs = urls.map((u, i) =>
+    `<img class="car-img thumb" src="${esc(u)}" alt="evidence ${i + 1}"${i ? ' hidden' : ''}>`).join('');
+  return `<div class="carousel" data-i="0">
+    <div class="car-stage">${imgs}</div>
+    <button type="button" class="car-btn prev" aria-label="Previous">‹</button>
+    <button type="button" class="car-btn next" aria-label="Next">›</button>
+    <span class="car-count">1 / ${urls.length}</span>
+  </div>`;
+}
+function initCarousel() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.car-btn');
+    if (!btn) return;
+    const car = btn.closest('.carousel');
+    const imgs = car.querySelectorAll('.car-img');
+    if (imgs.length < 2) return;
+    let i = +car.dataset.i || 0;
+    imgs[i].hidden = true;
+    i = (i + (btn.classList.contains('next') ? 1 : -1) + imgs.length) % imgs.length;
+    imgs[i].hidden = false;
+    car.dataset.i = i;
+    const c = car.querySelector('.car-count');
+    if (c) c.textContent = `${i + 1} / ${imgs.length}`;
+  });
+}
+
 function renderReport(rep) {
   const groups = [
     { key: 'discrepancies', title: 'Discrepancies (missing scope items)', cls: 'discrepancy',
       render: (d) => `<div class="title">${esc(d.issue_title)}</div>
-        <p><span class="label">Evidence:</span> ${esc(d.evidence_description)}</p>
-        <p class="action">→ ${esc(d.suggested_action)}</p>
-        ${d.related_image_url ? `<img class="thumb" src="${esc(d.related_image_url)}" alt="evidence">` : ''}` },
+        <p><span class="label">Evidence:</span> ${esc(stripUrls(d.evidence_description))}</p>
+        <p class="action">→ ${esc(stripUrls(d.suggested_action))}</p>
+        ${mediaHtml(collectImageUrls(d))}` },
     { key: 'ambiguity_alerts', title: 'Ambiguity Alerts', cls: 'ambiguity',
       render: (a) => `<blockquote>"${esc(a.original_text)}"</blockquote>
         <p><span class="label">Risk:</span> ${esc(a.risk_analysis)}</p>
@@ -281,3 +328,4 @@ loadSettings();
 initDropzone();
 initImport();
 initLightbox();
+initCarousel();
