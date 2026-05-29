@@ -1,5 +1,3 @@
-import pytest
-from pydantic import ValidationError
 from app.models.schemas import AuditReportSchema, VisionTagResult, IndexRequest
 
 
@@ -9,11 +7,6 @@ def test_audit_schema_roundtrip():
             "ambiguity_alerts": [], "safety_equipment_recommendations": []}
     rep = AuditReportSchema.model_validate(data)
     assert rep.discrepancies[0].issue_title == "t"
-
-
-def test_index_request_rejects_empty_urls():
-    with pytest.raises(ValidationError):
-        IndexRequest(project_id="P", image_urls=[])
 
 
 def test_vision_result():

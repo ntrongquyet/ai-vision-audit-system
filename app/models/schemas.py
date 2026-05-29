@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # --- AI outputs ---
 class VisionTagResult(BaseModel):
@@ -29,12 +29,6 @@ class AuditReportSchema(BaseModel):
 class IndexRequest(BaseModel):
     project_id: str
     image_urls: list[str]
-    @field_validator("image_urls")
-    @classmethod
-    def not_empty(cls, v):
-        if not v:
-            raise ValueError("image_urls must not be empty")
-        return v
 
 class AuditRequest(BaseModel):
     project_id: str

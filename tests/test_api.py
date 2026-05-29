@@ -22,11 +22,11 @@ def test_index_requires_key(client):
     assert r.status_code == 401
 
 
-def test_index_empty_urls_422(client):
+def test_index_empty_urls_400(client):
     r = client.post("/api/v1/projects/index",
                     headers={"X-API-KEY": "secret"},
                     json={"project_id": "P", "image_urls": []})
-    assert r.status_code == 422  # pydantic validation
+    assert r.status_code == 400
 
 
 def test_index_accepts(client):

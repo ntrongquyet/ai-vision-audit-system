@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from app.security import require_api_key
 from app.models.schemas import IndexRequest, IndexResponse
 from app.services import job_service
@@ -10,6 +10,8 @@ router = APIRouter(prefix="/api/v1/projects", tags=["index"])
 @router.post("/index", status_code=202, response_model=IndexResponse,
              dependencies=[Depends(require_api_key)])
 async def index_images(req: IndexRequest, background: BackgroundTasks):
+    if not req.image_urls:
+        raise HTTPException(status_code=400, detail="image_urls must not be empty")
     job_id = await job_service.create(req.project_id, len(req.image_urls))
     background.add_task(run_indexing_job, job_id, req.project_id, req.image_urls)
     return IndexResponse(project_id=req.project_id, job_id=str(job_id),
