@@ -8,4 +8,4 @@ router = APIRouter(prefix="/api/v1/projects", tags=["audit"])
 
 @router.post("/audit", response_model=AuditResponse, dependencies=[Depends(require_api_key)])
 async def audit(req: AuditRequest):
-    return await run_audit(req.project_id, req.scope_text)
+    return await run_audit(req.project_id, req.scope_text, req.language)

@@ -19,8 +19,16 @@ async def _call(messages) -> str:
     return resp.choices[0].message.content
 
 
-async def run_audit(context_block: str, scope_text: str) -> AuditReportSchema:
-    user = f"<context>\n{context_block}\n</context>\n<scope_text>\n{scope_text}\n</scope_text>"
+async def run_audit(context_block: str, scope_text: str,
+                    language: str = "English") -> AuditReportSchema:
+    user = (
+        f"<context>\n{context_block}\n</context>\n"
+        f"<scope_text>\n{scope_text}\n</scope_text>\n"
+        f"IMPORTANT: Keep the JSON keys exactly as specified (in English), but write "
+        f"every human-readable text VALUE (issue_title, evidence_description, "
+        f"suggested_action, original_text, risk_analysis, recommended_phrasing, "
+        f"equipment_name, reason) in {language}."
+    )
     messages = [
         {"role": "system", "content": REASONING_SYSTEM_PROMPT},
         {"role": "user", "content": user},

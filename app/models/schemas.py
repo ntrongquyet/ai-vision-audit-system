@@ -33,10 +33,12 @@ class IndexRequest(BaseModel):
 class AuditRequest(BaseModel):
     project_id: str
     scope_text: str
+    language: str = "English"  # language for the AI-generated report text
 
 class ChatRequest(BaseModel):
     project_id: str
     user_question: str
+    language: str = "English"  # language for the AI-generated answer
 
 # --- API responses ---
 class IndexResponse(BaseModel):

@@ -1,13 +1,96 @@
-<!doctype html><html><head><meta charset="utf-8"><title>AI Vision Audit</title>
-<style>body{font-family:sans-serif;max-width:880px;margin:24px auto}section{border:1px solid #ddd;padding:12px;margin:12px 0;border-radius:8px}input,textarea{width:100%}img{max-width:160px;margin:4px}pre{white-space:pre-wrap;background:#f6f6f6;padding:8px}</style>
-</head><body>
-<h2>AI Vision Audit System — Demo</h2>
-<section><label>X-API-KEY</label><input id="key"><label>Project ID</label><input id="pid" value="PROJ-3132"></section>
-<section><h3>1. Upload & Index</h3><input type="file" id="files" multiple>
-<button onclick="uploadAndIndex()">Upload + Index</button>
-<button onclick="refreshStatus()">Refresh status</button><pre id="status"></pre></section>
-<section><h3>2. Audit</h3><textarea id="scope" rows="5" placeholder="Paste Scope of Works..."></textarea>
-<button onclick="runAudit()">Run AI Audit</button><div id="report"></div></section>
-<section><h3>3. Chat</h3><input id="q" placeholder="Any high-access paint work needed?">
-<button onclick="chat()">Ask</button><div id="chat"></div></section>
-<script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Vision Audit System</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">AV</div>
+      <div>
+        <h1>AI Vision Audit System</h1>
+        <p class="tagline">Cross-check site photos against the Scope of Works</p>
+      </div>
+    </div>
+    <span class="env-badge" id="connState">Not connected</span>
+  </header>
+
+  <main class="container">
+    <!-- Settings -->
+    <section class="card settings">
+      <div class="field">
+        <label for="key">API Key <span class="hint">(X-API-KEY)</span></label>
+        <input id="key" type="password" placeholder="dev-secret-key" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="pid">Project ID</label>
+        <input id="pid" type="text" value="PROJ-3132" />
+      </div>
+      <div class="field">
+        <label for="lang">Result language <span class="hint">(AI output)</span></label>
+        <select id="lang">
+          <option value="English">English</option>
+          <option value="Vietnamese">Tiếng Việt</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 1. Upload & Index -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">1</span>
+        <h2>Upload &amp; Index Photos</h2>
+      </div>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('files').click()">
+        <input type="file" id="files" accept="image/*" multiple hidden />
+        <p><strong>Click to choose</strong> or drag &amp; drop site photos</p>
+        <p class="muted" id="fileCount">No files selected</p>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="indexBtn" onclick="uploadAndIndex()">Upload &amp; Index</button>
+        <button class="btn ghost" id="refreshBtn" onclick="refreshStatus()">Refresh status</button>
+      </div>
+      <div class="status-panel hidden" id="statusPanel">
+        <div class="status-row">
+          <span class="status-badge" id="statusBadge">pending</span>
+          <span class="muted" id="statusCounts"></span>
+        </div>
+        <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+      </div>
+    </section>
+
+    <!-- 2. Audit -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">2</span>
+        <h2>Run AI Audit</h2>
+      </div>
+      <textarea id="scope" rows="6" placeholder="Paste the Scope of Works / quotation text here..."></textarea>
+      <div class="actions">
+        <button class="btn primary" id="auditBtn" onclick="runAudit()">Run AI Audit</button>
+      </div>
+      <div id="report" class="report"></div>
+    </section>
+
+    <!-- 3. Chat -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">3</span>
+        <h2>Ask about the Site</h2>
+      </div>
+      <div class="chat-input">
+        <input id="q" type="text" placeholder="e.g. Any high-access paint work needed?"
+               onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="btn primary" id="chatBtn" onclick="sendChat()">Ask</button>
+      </div>
+      <div id="chat" class="chat-output"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
