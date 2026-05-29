@@ -260,29 +260,27 @@ function mediaHtml(urls) {
   if (urls.length === 1)
     return `<img class="thumb" src="${esc(urls[0])}" alt="evidence">`;
   const imgs = urls.map((u, i) =>
-    `<img class="car-img thumb" src="${esc(u)}" alt="evidence ${i + 1}"${i ? ' hidden' : ''}>`).join('');
+    `<img class="car-img thumb" src="${esc(u)}" alt="evidence ${i + 1}" style="display:${i ? 'none' : 'block'}">`).join('');
   return `<div class="carousel" data-i="0">
     <div class="car-stage">${imgs}</div>
-    <button type="button" class="car-btn prev" aria-label="Previous">‹</button>
-    <button type="button" class="car-btn next" aria-label="Next">›</button>
+    <button type="button" class="car-btn prev" aria-label="Previous" onclick="carouselNav(this,-1)">‹</button>
+    <button type="button" class="car-btn next" aria-label="Next" onclick="carouselNav(this,1)">›</button>
     <span class="car-count">1 / ${urls.length}</span>
   </div>`;
 }
-function initCarousel() {
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.car-btn');
-    if (!btn) return;
-    const car = btn.closest('.carousel');
-    const imgs = car.querySelectorAll('.car-img');
-    if (imgs.length < 2) return;
-    let i = +car.dataset.i || 0;
-    imgs[i].hidden = true;
-    i = (i + (btn.classList.contains('next') ? 1 : -1) + imgs.length) % imgs.length;
-    imgs[i].hidden = false;
-    car.dataset.i = i;
-    const c = car.querySelector('.car-count');
-    if (c) c.textContent = `${i + 1} / ${imgs.length}`;
-  });
+// Inline onclick (robust against event-delegation/cache issues). Toggles inline
+// display so it never depends on CSS specificity of the [hidden] attribute.
+function carouselNav(btn, dir) {
+  const car = btn.closest('.carousel');
+  const imgs = car.querySelectorAll('.car-img');
+  if (imgs.length < 2) return;
+  let i = +car.dataset.i || 0;
+  imgs[i].style.display = 'none';
+  i = (i + dir + imgs.length) % imgs.length;
+  imgs[i].style.display = 'block';
+  car.dataset.i = i;
+  const c = car.querySelector('.car-count');
+  if (c) c.textContent = `${i + 1} / ${imgs.length}`;
 }
 
 function renderReport(rep) {
@@ -339,4 +337,3 @@ loadSettings();
 initDropzone();
 initImport();
 initLightbox();
-initCarousel();
