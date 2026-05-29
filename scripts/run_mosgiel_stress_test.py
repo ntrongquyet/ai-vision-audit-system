@@ -9,8 +9,18 @@ IMG_DIR = "docs/sample-data/images/3132 BestStart Mosgiel, Interior and Exterior
 # SoW cố tình BỎ SÓT: rust mái, pressure-wash mould, scaffolding tường cao
 SCOPE = ("Interior and Exterior Repaint '26. Paint all timber weatherboard walls and "
          "window frames. Clean surfaces before application.")
-# Các lỗi cài cắm kỳ vọng AI phát hiện (khớp keyword bất kỳ trong report text):
-EXPECTED = ["rust", "mould", "moss", "pressure", "psi", "scaffold", "ladder", "boom", "lead"]
+# Các gap cố tình cài cắm. Mỗi gap là một NHÓM khái niệm: chỉ cần AI nhắc tới
+# BẤT KỲ synonym nào trong nhóm là tính đã phát hiện (đo đúng "bắt được vấn đề",
+# không phụ thuộc câu chữ chính xác của model).
+EXPECTED_CONCEPTS = {
+    "rust/corrosion on metal": ["rust", "corros", "corrugated iron", "galvanis"],
+    "mould/moss organic growth": ["mould", "mold", "mildew", "moss", "organic", "algae"],
+    "pressure washing prep": ["pressure", "psi", "water blast", "wash"],
+    "high-access equipment": ["scaffold", "ladder", "boom", "mewp", "elevated",
+                               "cherry picker", "height", "fall protection"],
+    "lead paint (pre-1970)": ["lead"],
+    "timber rot / carpentry repair": ["rot", "carpentry", "deteriorat", "timber repair"],
+}
 
 async def main():
     h = {"X-API-KEY": KEY}
@@ -36,9 +46,13 @@ async def main():
         rep = (await c.post(f"{API}/api/v1/projects/audit", headers=h,
                             json={"project_id": PID, "scope_text": SCOPE})).json()
         text = str(rep).lower()
-        hits = [k for k in EXPECTED if k in text]
-        score = len(hits) / len(EXPECTED)
-        print(f"detected keywords: {hits}")
+        detected = {c: any(s in text for s in syns) for c, syns in EXPECTED_CONCEPTS.items()}
+        hits = [c for c, ok in detected.items() if ok]
+        missed = [c for c, ok in detected.items() if not ok]
+        score = len(hits) / len(EXPECTED_CONCEPTS)
+        print("detected gaps:", hits)
+        if missed:
+            print("missed gaps:", missed)
         print(f"DETECTION SCORE: {score:.0%}  (target >= 90%)")
         assert score >= 0.9, "FAILED Mosgiel acceptance (<90%)"
         print("PASSED Mosgiel acceptance")
