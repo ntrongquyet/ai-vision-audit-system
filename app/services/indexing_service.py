@@ -24,6 +24,7 @@ async def run_indexing_job(job_id, project_id: str, image_urls: list[str]):
     succeeded = failed = 0
     errors: list[dict] = []
     batch = get_settings().ai_batch_size
+    await job_service.mark_processing(job_id)
     for i in range(0, len(image_urls), batch):     # FR-1.2: batch 5
         chunk = image_urls[i:i + batch]
         results = await asyncio.gather(
@@ -35,4 +36,6 @@ async def run_indexing_job(job_id, project_id: str, image_urls: list[str]):
                 logger.error(f"index failed {url}: {res}")
             else:
                 succeeded += 1
+        # persist incremental progress so the UI progress bar tracks reality
+        await job_service.update_progress(job_id, succeeded, failed)
     await job_service.finalize(job_id, succeeded, failed, errors)

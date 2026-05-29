@@ -47,8 +47,16 @@ function toast(msg, kind = '') {
   t._timer = setTimeout(() => { t.className = 'toast hidden'; }, 4200);
 }
 function busy(btn, on, label) {
-  if (on) { btn.dataset.label = btn.innerHTML; btn.disabled = true; btn.innerHTML = `<span class="spinner"></span>${label}`; }
-  else { btn.disabled = false; btn.innerHTML = btn.dataset.label || label; }
+  if (on) {
+    // save the pristine label only on the FIRST activation, so repeated
+    // busy() calls (Uploading... -> Indexing...) don't capture spinner markup
+    if (!btn.disabled) btn.dataset.label = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>${label}`;
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.label || label;
+  }
 }
 
 /* ---------- file selection ---------- */
@@ -85,10 +93,9 @@ async function uploadAndIndex() {
     });
     toast(`Indexing ${up.image_urls.length} photo(s) started`, 'success');
     $('statusPanel').classList.remove('hidden');
-    startPolling();
+    startPolling();   // the button stays busy until the job reaches a terminal status
   } catch (e) {
     toast(e.message, 'error');
-  } finally {
     busy(btn, false, 'Upload & Index');
   }
 }
@@ -105,9 +112,13 @@ async function refreshStatus() {
     const st = await api(`/api/v1/projects/${encodeURIComponent(pid())}/status`);
     $('statusPanel').classList.remove('hidden');
     renderStatus(st);
-    if (['completed', 'partial', 'failed'].includes(st.status)) clearInterval(pollTimer);
+    if (['completed', 'partial', 'failed'].includes(st.status)) {
+      clearInterval(pollTimer);
+      busy($('indexBtn'), false, 'Upload & Index');   // sync button with job completion
+    }
   } catch (e) {
     clearInterval(pollTimer);
+    busy($('indexBtn'), false, 'Upload & Index');
     if (!/404/.test(e.message)) toast(e.message, 'error');
   }
 }

@@ -151,6 +151,7 @@ textarea { resize: vertical; }
 /* Evidence carousel */
 .carousel { position: relative; margin-top: 12px; display: inline-block; max-width: 100%; }
 .car-stage img { display: block; max-width: 340px; max-height: 260px; border-radius: 8px; border: 1px solid var(--border); }
+.car-stage img[hidden] { display: none; }   /* show one slide at a time */
 .car-btn {
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 34px; height: 34px; border-radius: 50%; border: none;

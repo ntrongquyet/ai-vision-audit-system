@@ -10,6 +10,24 @@ async def create(project_id: str, total: int) -> uuid.UUID:
         return job.id
 
 
+async def mark_processing(job_id: uuid.UUID):
+    async with SessionLocal() as s:
+        job = await repo.get_job(s, job_id)
+        job.status = "processing"
+        await s.commit()
+
+
+async def update_progress(job_id: uuid.UUID, succeeded: int, failed: int):
+    """Persist incremental progress so GET /status reflects real-time indexing."""
+    async with SessionLocal() as s:
+        job = await repo.get_job(s, job_id)
+        job.status = "processing"
+        job.succeeded_images = succeeded
+        job.failed_images = failed
+        job.processed_images = succeeded + failed
+        await s.commit()
+
+
 async def finalize(job_id: uuid.UUID, succeeded: int, failed: int, errors: list):
     async with SessionLocal() as s:
         job = await repo.get_job(s, job_id)
