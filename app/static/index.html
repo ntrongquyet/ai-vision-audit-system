@@ -15,28 +15,10 @@
         <p class="tagline">Cross-check site photos against the Scope of Works</p>
       </div>
     </div>
-    <span class="env-badge" id="connState">Not connected</span>
+    <span class="env-badge ok" id="connState">Ready</span>
   </header>
 
   <main class="container">
-    <!-- Settings -->
-    <section class="card settings">
-      <div class="field">
-        <label for="key">API Key <span class="hint">(X-API-KEY)</span></label>
-        <input id="key" type="password" placeholder="dev-secret-key" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="pid">Project ID</label>
-        <input id="pid" type="text" value="PROJ-3132" />
-      </div>
-      <div class="field">
-        <label for="lang">Result language <span class="hint">(AI output)</span></label>
-        <select id="lang">
-          <option value="English">English</option>
-          <option value="Vietnamese">Tiếng Việt</option>
-        </select>
-      </div>
-    </section>
 
     <!-- 1. Upload & Index -->
     <section class="card">
@@ -90,19 +72,6 @@
       <div id="report" class="report"></div>
     </section>
 
-    <!-- 3. Chat -->
-    <section class="card">
-      <div class="card-head">
-        <span class="step">3</span>
-        <h2>Ask about the Site</h2>
-      </div>
-      <div class="chat-input">
-        <input id="q" type="text" placeholder="e.g. Any high-access paint work needed?"
-               onkeydown="if(event.key==='Enter')sendChat()" />
-        <button class="btn primary" id="chatBtn" onclick="sendChat()">Ask</button>
-      </div>
-      <div id="chat" class="chat-output"></div>
-    </section>
   </main>
 
   <div id="toast" class="toast hidden"></div>

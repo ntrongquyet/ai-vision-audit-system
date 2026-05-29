@@ -3,33 +3,23 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const key = () => $('key').value.trim();
-const pid = () => $('pid').value.trim();
-const lang = () => $('lang').value;
+const LANG = 'en';
+const API_KEY = 'test-demo-quyet';
+
+function getProjectId() {
+  let id = localStorage.getItem('av_pid');
+  if (!id) {
+    id = 'PROJ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    localStorage.setItem('av_pid', id);
+  }
+  return id;
+}
 
 let pollTimer = null;
 
-/* ---------- settings persistence ---------- */
-function loadSettings() {
-  $('key').value = localStorage.getItem('av_key') || '';
-  $('pid').value = localStorage.getItem('av_pid') || 'PROJ-3132';
-  $('lang').value = localStorage.getItem('av_lang') || 'English';
-  ['key', 'pid', 'lang'].forEach((id) =>
-    $(id).addEventListener('change', () => {
-      localStorage.setItem('av_' + id, $(id).value);
-      updateConn();
-    }));
-  updateConn();
-}
-function updateConn() {
-  const el = $('connState');
-  if (key()) { el.textContent = 'Key set · ' + pid(); el.className = 'env-badge ok'; }
-  else { el.textContent = 'No API key'; el.className = 'env-badge bad'; }
-}
-
 /* ---------- generic request ---------- */
 async function api(path, opts = {}) {
-  const headers = Object.assign({ 'X-API-KEY': key() }, opts.headers || {});
+  const headers = Object.assign({ 'X-API-KEY': API_KEY }, opts.headers || {});
   const res = await fetch(path, Object.assign({}, opts, { headers }));
   let body = null;
   try { body = await res.json(); } catch { /* non-json */ }
@@ -77,7 +67,6 @@ function showFileCount(files) {
 
 /* ---------- 1. upload + index ---------- */
 async function uploadAndIndex() {
-  if (!key()) return toast('Enter your API key first', 'error');
   const files = $('files').files;
   if (!files.length) return toast('Choose at least one photo', 'error');
   const btn = $('indexBtn');
@@ -89,7 +78,7 @@ async function uploadAndIndex() {
     busy(btn, true, 'Indexing...');
     await api('/api/v1/projects/index', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project_id: pid(), image_urls: up.image_urls }),
+      body: JSON.stringify({ project_id: getProjectId(), image_urls: up.image_urls }),
     });
     toast(`Indexing ${up.image_urls.length} photo(s) started`, 'success');
     $('statusPanel').classList.remove('hidden');
@@ -107,9 +96,8 @@ function startPolling() {
 }
 
 async function refreshStatus() {
-  if (!key()) return;
   try {
-    const st = await api(`/api/v1/projects/${encodeURIComponent(pid())}/status`);
+    const st = await api(`/api/v1/projects/${encodeURIComponent(getProjectId())}/status`);
     $('statusPanel').classList.remove('hidden');
     renderStatus(st);
     if (['completed', 'partial', 'failed'].includes(st.status)) {
@@ -182,7 +170,6 @@ function initImport() {
 async function importDoc(ev) {
   const file = ev.target.files[0];
   if (!file) return;
-  if (!key()) { ev.target.value = ''; return toast('Enter your API key first', 'error'); }
   const btn = $('importBtn');
   busy(btn, true, 'Extracting...');
   try {
@@ -219,7 +206,6 @@ function initLightbox() {
 
 /* ---------- 2. audit ---------- */
 async function runAudit() {
-  if (!key()) return toast('Enter your API key first', 'error');
   const scope = $('scope').value.trim();
   if (!scope) return toast('Paste the Scope of Works first', 'error');
   const btn = $('auditBtn');
@@ -228,7 +214,7 @@ async function runAudit() {
   try {
     const r = await api('/api/v1/projects/audit', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project_id: pid(), scope_text: scope, language: lang() }),
+      body: JSON.stringify({ project_id: getProjectId(), scope_text: scope, language: LANG }),
     });
     renderReport(r.audit_report || {});
   } catch (e) {
@@ -309,31 +295,8 @@ function renderReport(rep) {
   $('report').innerHTML = html;
 }
 
-/* ---------- 3. chat ---------- */
-async function sendChat() {
-  if (!key()) return toast('Enter your API key first', 'error');
-  const q = $('q').value.trim();
-  if (!q) return;
-  const btn = $('chatBtn');
-  busy(btn, true, 'Asking...');
-  try {
-    const r = await api('/api/v1/projects/chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project_id: pid(), user_question: q, language: lang() }),
-    });
-    const refs = (r.reference_image_urls || [])
-      .map((u) => `<img src="${esc(u)}" alt="ref">`).join('');
-    $('chat').innerHTML = `<div class="bubble">${esc(r.answer_text)}</div>
-      ${refs ? `<div class="refs">${refs}</div>` : ''}`;
-  } catch (e) {
-    toast(e.message, 'error');
-  } finally {
-    busy(btn, false, 'Ask');
-  }
-}
-
 /* ---------- init ---------- */
-loadSettings();
+getProjectId();
 initDropzone();
 initImport();
 initLightbox();
